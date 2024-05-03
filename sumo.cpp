@@ -6,52 +6,50 @@ void Sumo::setup(){
     _driver.attachMotor(Motor::RIGHT);
     
     // sumo pin setup
-    pinMode(OPPONENT_FL, OUTPUT);   
-    pinMode(OPPONENT_FC, OUTPUT);   
-    pinMode(OPPONENT_FR, OUTPUT);
+    pinMode(OPPONENT_FL, INPUT);
+    pinMode(OPPONENT_FC, INPUT);
+    pinMode(OPPONENT_FR, INPUT);
 
-    pinMode(OPPONENT_LEFT, OUTPUT);   
-    pinMode(OPPONENT_RIGHT, OUTPUT);
+    pinMode(OPPONENT_LEFT, INPUT);
+    pinMode(OPPONENT_RIGHT, INPUT);
 
-    pinMode(LINE_FR, INPUT); // NOTE: maybe these can be output   
-    pinMode(LINE_FL, INPUT); // NOTE: maybe these can be output   
-    pinMode(LINE_BC, INPUT); // NOTE: maybe these can be output   
+    pinMode(LINE_FR, INPUT);
+    pinMode(LINE_FL, INPUT);
+    pinMode(LINE_BC, INPUT);
 
-    // TODO: add start module and it's LED
+    pinMode(START_MODULE, INPUT);
+    pinMode(START_LED, OUTPUT);
+    pinMode(DRIVER_STANDBY, OUTPUT);
 }
 
-// FIXME: THIS MUST BE REPLACED
-constexpr int tempThresHold = 100; 
-
 // TODO: test this out.
-// FIXME: you may need to specify direction here
 void Sumo::loop(){
-    if (analogRead(LINE_FL) < tempThresHold){
+    digitalWrite(DRIVER_STANDBY, !digitalRead(START_MODULE));
+    digitalWrite(START_LED, !digitalRead(START_MODULE));
+    if (analogRead(LINE_FR) < THRESHOLD){
+        _searchDir = LEFT;
         backoff();
-        _searchDir ^= 1;
     }
-    else if(analogRead(LINE_FR) < tempThresHold){
+    else if (analogRead(LINE_FL) < THRESHOLD){
+        _searchDir = RIGHT;
         backoff();
-        _searchDir ^= 1;
-    }// TODO: add back sensor aswell
+    }
+    else if(analogRead(LINE_BC) < THRESHOLD){
+        _searchDir = FORWARD;
+        backoff();
+    }
     else{ // edge not detected
         if 
-        (digitalRead(OPPONENT_FC)   == HIGH &&
-        digitalRead(OPPONENT_FL)    == HIGH &&
-        digitalRead(OPPONENT_FR)    == HIGH &&
-        digitalRead(OPPONENT_LEFT)  == HIGH &&
-        digitalRead(OPPONENT_RIGHT) == HIGH){
+        (digitalRead(OPPONENT_FC)   == LOW &&
+        digitalRead(OPPONENT_FL)    == LOW &&
+        digitalRead(OPPONENT_FR)    == LOW &&
+        digitalRead(OPPONENT_LEFT)  == LOW &&
+        digitalRead(OPPONENT_RIGHT) == LOW){
             search();
         }
         else{
             attack();
         }
-    }
-    // FIXME: placeholder for start module.
-    if (digitalRead(START_MODULE) == 0){
-        _driver.stop(Motor::LEFT);
-        _driver.stop(Motor::RIGHT);
-        while (1);
     }
 }
 
@@ -66,46 +64,63 @@ void Sumo::search(){
     }
 }
 
-// TODO: test this delay and you may play with it's speed values
 void Sumo::attack(){
-    if (digitalRead(OPPONENT_FC) == LOW){
-        _driver.forward(Motor::LEFT, 255);
-        _driver.forward(Motor::RIGHT, 255);
+    if (digitalRead(OPPONENT_FC) == HIGH){
+        _driver.forward(Motor::LEFT, 250);
+        _driver.forward(Motor::RIGHT, 250);
     }
-    else if (digitalRead(OPPONENT_FL) == LOW){
-        _driver.forward(Motor::LEFT, 0);
-        _driver.forward(Motor::RIGHT, 255);
-    }
-    else if (digitalRead(OPPONENT_FL) == LOW){
-        _driver.forward(Motor::LEFT, 255);
-        _driver.forward(Motor::RIGHT, 0);
-    }
-    else if (digitalRead(OPPONENT_LEFT) == LOW){
+    else if(digitalRead(OPPONENT_FC) == HIGH && digitalRead(OPPONENT_FL)){
         _driver.reverse(Motor::LEFT, 100);
         _driver.forward(Motor::RIGHT, 100);
-        delay(300);
     }
-    else if (digitalRead(OPPONENT_RIGHT) == LOW){
-        _driver.forward(Motor::LEFT, 100);
+    else if(digitalRead(OPPONENT_FC) == HIGH && digitalRead(OPPONENT_FR)){
+        _driver.forward(Motor::LEFT, 0);
         _driver.reverse(Motor::RIGHT, 100);
-        delay(300);
+    }
+    else if (digitalRead(OPPONENT_FL) == HIGH){
+        _driver.forward(Motor::LEFT, 250);
+        _driver.reverse(Motor::RIGHT, 250);
+    }
+    else if (digitalRead(OPPONENT_FR) == HIGH){
+        _driver.reverse(Motor::LEFT, 250);
+        _driver.forward(Motor::RIGHT, 250);
+    }
+    else if (digitalRead(OPPONENT_LEFT) == HIGH){
+        _driver.reverse(Motor::LEFT, 250);
+        _driver.forward(Motor::RIGHT, 250);
+        delay(10);
+    }
+    else if (digitalRead(OPPONENT_RIGHT) == HIGH){
+        _driver.forward(Motor::LEFT, 250);
+        _driver.reverse(Motor::RIGHT, 250);
     }
 }
 
 void Sumo::backoff(){
-    _driver.reverse(Motor::LEFT, 50);
-    _driver.reverse(Motor::RIGHT, 50);
-    delay(300);
-
     if (_searchDir == LEFT){
-        _driver.reverse(Motor::LEFT, 50);
-        _driver.forward(Motor::RIGHT, 50);
+        _driver.reverse(Motor::LEFT, 150);
+        _driver.reverse(Motor::RIGHT, 150);
+        delay (200);
+        _driver.forward(Motor::LEFT, 150);
+        _driver.reverse(Motor::RIGHT, 150);
+        delay(30);
     }
-    else{
-        _driver.forward(Motor::LEFT, 50);
-        _driver.reverse(Motor::RIGHT, 50);
+    else if(_searchDir == RIGHT){
+        _driver.reverse(Motor::LEFT, 150);
+        _driver.reverse(Motor::RIGHT, 150);
+        delay(200);
+        _driver.reverse(Motor::LEFT, 150);
+        _driver.forward(Motor::RIGHT, 150);
+        delay(30);
     }
-    delay(600);
+    if(_searchDir == FORWARD){
+        _driver.forward(Motor::LEFT, 150);
+        _driver.forward(Motor::RIGHT, 150);
+        delay(200);
+        _driver.reverse(Motor::LEFT, 150);
+        _driver.forward(Motor::RIGHT, 150);
+        delay(30);
+    }
     _driver.stop(Motor::LEFT);
     _driver.stop(Motor::RIGHT);
     delay(50);

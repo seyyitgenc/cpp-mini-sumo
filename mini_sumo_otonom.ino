@@ -3,7 +3,6 @@
 Sumo sumo;
 
 void setup(){
-    // Serial.begin(9600);
     sumo.setup();
 }
 

@@ -3,7 +3,6 @@
 
 #include "pins.h"
 
-// TODO: test this library out to make sure everything works fine  
 enum struct Motor{
     LEFT,
     RIGHT
